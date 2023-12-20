@@ -1,23 +1,15 @@
 const mongoose = require('mongoose')
 
 const gameSchema = new mongoose.Schema({
-    startedAt : {
-        type:Date,
-        required : true
-    },
-    endedAt : {
-        type : Date,
-        required : true
-    },
-    players : {
+    room : {
         type : Array,
         required : true
     },
     winner : {
         type:String,
-        default : null
+        default : ""
     }
-})
+},{timestamps : true})
 
 const userSchema = new mongoose.Schema({
     username : {
@@ -40,6 +32,14 @@ const userSchema = new mongoose.Schema({
         type:Boolean,
         default : false
     },
+    is_ingame : {
+        type : Boolean,
+        default : false
+    },
+    game_id : {
+        type : String,
+        default : ""
+    },
     socket_id : {
         type:String,
         default : ""
@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema({
         type : Array(String),
     }
     
-})
+},{timestamps : true})
 
 const ava_user = new mongoose.Schema({
     user_id : {

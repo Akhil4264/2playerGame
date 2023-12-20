@@ -81,7 +81,8 @@
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
         }
         .start-game{
-            display: grid;
+            /* display: grid; */
+            display: none;
 
         }
         #lookOut{
@@ -105,7 +106,7 @@
     <header>
         <h1>Home</h1>
         <div class="username-container">
-            <div class="username"><%= user.username %></div>
+            <div class="username" id="username"><%= user.username %></div>
             <form class="logout-options" method="post" action="/logout">
                 <input type="submit" value="logout">
             </form>

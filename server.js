@@ -38,6 +38,14 @@ app.engine('html', require('ejs').renderFile);
 
 
 
+
+
+function getRandomElement(arr) {
+    const randomIndex = Math.floor(Math.random() * arr.length);
+    return arr[randomIndex];
+}
+  
+
 //socket.io
 
 io.on('connection',async(socket)=>{
@@ -56,12 +64,38 @@ io.on('connection',async(socket)=>{
 
             await user.updateOne({_id : socket.request.session.userId},{$set : {socket_id : socket.id , is_online : true}}).exec()
 
-            const newUser = await user.findOne({_id : socket.request.session.userId}).select('username -_id')
+            const newUser = await user.findOne({_id : socket.request.session.userId}).select('username')
             const allUsers = await user.find({is_online : true , _id : {$ne : socket.request.session.userId}}).select('username -_id')
+            const activeUsers = await user.find({is_online : true,is_ingame : false , _id : {$ne : socket.request.session.userId}}).select('username socket_id')
 
             socket.emit('allUsers',allUsers);
             socket.broadcast.emit('newUser',newUser);
+
+            if(activeUsers.length === 0){
+                socket.emit('No users')
+            }
+            else{
+                const opponent = getRandomElement(activeUsers)
+                const { socket_id, ...opp_details } = opponent;
+                const room = [newUser,opp_details]
+                const newGame =  new game({room : room})
+                const gameDetails = await newGame.save()
+                
+                message_opp = {
+                    game_id : gameDetails._id,
+                    opponent : newUser.username
+                }
+                message_new = {
+                    game_id : gameDetails._id,
+                    opponent : opponent.username
+                }
+                
+                socket.emit('Game',(message_new))
+                socket.to(opponent.socket_id).emit('Game',(message_opp))
+
+            }
             
+
 
         }
     }
@@ -75,7 +109,7 @@ io.on('connection',async(socket)=>{
             await user.updateOne({_id : socket.request.session.userId},{$set : {socket_id : "" , is_online : false}}).exec();
             socket.broadcast.emit('leftUser',leftUser)
             // socket.request.clearCookie('user_sid')
-            console.log('A user is disconncted ... 😖')
+            console.log(leftUser.username , ' is disconncted ... 😖')
             
         }
         else{
