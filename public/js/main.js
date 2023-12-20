@@ -1,6 +1,7 @@
 const users_list = document.querySelector('.users-list')
 const start_game = document.querySelector('.start-game')
 
+
 const socket = io();
 
 
@@ -46,6 +47,25 @@ socket.on('Game',(data) => {
     console.log('a game started between u and ',data.opponent)
     start_game.style.display = 'grid'
 })
+
+socket.on('opponent left',(game) => {
+
+    console.log('opponent left , you won !!!!')
+    won(game)
+})
+
+
+function won(data){
+    // send if the current user won the game
+    console.log('submitting your success')
+    socket.emit('won',data)
+    start_game.style.display = 'none'
+}
+
+function lost(data){
+    socket.emit('lost',data)
+    start_game.style.display = 'none'
+}
 
 
 

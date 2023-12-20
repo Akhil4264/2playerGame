@@ -36,9 +36,9 @@ const userSchema = new mongoose.Schema({
         type : Boolean,
         default : false
     },
-    game_id : {
-        type : String,
-        default : ""
+    game : {
+        type : gameSchema,
+        default : null
     },
     socket_id : {
         type:String,
