@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/game.css">
     <style>
 
         body {
@@ -85,6 +86,11 @@
             display: none;
 
         }
+        .src-btn{
+            margin: 5px;
+            padding: 5px;
+            display: grid;
+        }
         #lookOut{
             width: 20%;
             height: 40px;
@@ -112,6 +118,9 @@
             </form>
         </div>
     </header>
+    <div class="src-btn">
+        <button id="lookOut">Look for players .... </button>
+    </div>
 
     <section class="aval-players">
         <h2>Avaliable players</h2>
@@ -120,11 +129,33 @@
     </section>
 
     <div class="start-game">
-        <button id="lookOut">Look for players .... </button>
+        <div class="gameContainer">
+            <div class="game">
+                <div class="box-top">
+                    <div class="box" style="border-left: none;border-top: none"></div>
+                    <div class="box" style="border-top: none"></div>
+                    <div class="box" style="border-right: none;border-top: none"></div>
+                </div>
+                <div class="box-middle">
+                    <div class="box" style="border-left: none;"></div>
+                    <div class="box"></div>
+                    <div class="box"style="border-right: none;"></div>
+                </div>
+                <div class="box-bottom">
+                    <div class="box" style="border-left: none;border-bottom: none"></div>
+                    <div class="box" style="border-bottom: none"></div>
+                    <div class="box" style="border-right: none;border-bottom: none"></div>
+                </div>
+            </div>
+            <div class="reset">
+                <button onclick="Reset()" id="reset">Reset</button>
+            </div>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/main.js"></script>
+    <script src="/js/gameLogic.js"></script>
 
 </body>
 </html>
