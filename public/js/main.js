@@ -38,11 +38,11 @@ socket.on('No users',() => {
     console.log('no users')
 })
 
-
 socket.on('Game',(data) => {
     start_game.style.display = 'grid'
     your_turn = data.your_turn
     gameDetails = data
+    console.log(data)
 
 })
 
@@ -52,6 +52,13 @@ socket.on('opponent left',(game) => {
     won(game)
 })
 
+function participate(){
+    socket.emit('participate')
+}
+
+function withdraw(){
+    socket.emit('withdraw')
+}
 
 function won(data){
     // send if the current user won the game
@@ -94,15 +101,6 @@ function Reset(){
     boxes.forEach((box)=>{
         box.innerHTML = ""
     })
-    if(start == "X"){
-        start = "0"
-        turn = "0"
-    }
-    else{
-        start = "X"
-        turn = "X"
-    }
-    reset.style.display = "none"
     gameover = false
 }
 
@@ -128,9 +126,11 @@ const checkwin = (index) =>{
             reset.style.display = "grid"
             if(boxes[check[0]].innerHTML === "X"){
                 won(gameDetails)
+                Reset()
             }
             else{
                 lost(gameDetails)
+                Reset()
             }
             return ;
         }
@@ -147,7 +147,6 @@ const blink =(element,winner)=>{
         }
     }, 100);
 }
-
 
 socket.on('opponent move',(data) => {
     boxes[data.opp_choice].innerHTML = "0"

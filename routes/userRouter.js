@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs')
 
 
 
+
 const redirectHome = async(req,res,next) =>{
     if(req.session.userId){
         const findUser = await user.find({_id : req.session.userId})

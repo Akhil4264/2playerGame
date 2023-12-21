@@ -14,9 +14,10 @@ const userRouter = require('./routes/userRouter')
 require('./database/conn')
 const path = require('path')
 const {user,game,aval_user} = require('./models/user.model')
+require('dotenv').config()
 
 
-const port = 4000
+const port = process.env.PORT || 3000
 const sessionMiddleware = session({
     name : 'user_sid',
     secret : process.env.SESSION_SECRET || 'user-secret',
@@ -51,7 +52,8 @@ function getOpponent(myId,arr){
     }
     return arr[0]
 }
-  
+
+
 
 //socket.io
 
@@ -70,33 +72,33 @@ io.on('connection',async(socket)=>{
             console.log('New user : ',findUser.username);
 
             await user.updateOne({_id : socket.request.session.userId},{$set : {socket_id : socket.id , is_online : true}})
-
-            const newUser = await user.findOne({_id : socket.request.session.userId}).select('username')
+            const newUser = await user.findOne({_id : socket.request.session.userId}).select('username socket_id')
             const allUsers = await user.find({is_online : true , _id : {$ne : socket.request.session.userId}}).select('username -_id')
-            const activeUsers = await user.find({is_online : true,is_ingame : false , _id : {$ne : socket.request.session.userId}}).select('username socket_id')
+            const activeUsers = await user.find({wantsToPlay : true,is_ingame : false , _id : {$ne : socket.request.session.userId}}).select('username socket_id')
 
             socket.emit('allUsers',allUsers);
             socket.broadcast.emit('newUser',newUser);
+
+            // function lookOut(activeUsers,newParticipant)
 
             if(activeUsers.length === 0){
                 socket.emit('No users')
             }
             else{
                 const opponent = getRandomElement(activeUsers)
-                const { socket_id, ...opp_details } = opponent;
-                const room = [newUser,opp_details]
+                const room = [newUser,opponent]
                 const newGame =  new game({room : room})
                 const gameDetails = await newGame.save()
                 
                 message_opp = {
                     game_id : gameDetails._id,
-                    opponent : newUser.username,
-                    your_turn : true
+                    your_turn : true,
+                    ...newUser._doc
                 }
                 message_new = {
                     game_id : gameDetails._id,
-                    opponent : opponent.username,
-                    your_turn : false
+                    your_turn : false,
+                    ...opponent._doc
                 }
 
                 await user.updateOne(
@@ -125,16 +127,65 @@ io.on('connection',async(socket)=>{
 
     socket.on('won',async(data) => {
         await game.updateOne({_id : data.game_id},{$set : {winner : socket.request.session.userId}})
-        await user.updateOne({_id : socket.request.session.userId},{$set : {is_ingame : false , game : null}});
+        await user.updateOne({_id : socket.request.session.userId},{$set : {is_ingame : false ,wantsToPlay:false, game : null}});
     })
 
     socket.on('lost',async(data)=> {
-        await user.updateOne({_id : socket.request.session.userId},{$set : {is_ingame : false , game : null}});
+        await user.updateOne({_id : socket.request.session.userId},{$set : {is_ingame : false ,wantsToPlay:  false, game : null}});
     })
 
     socket.on('myMove',async(data) => {
-        const opponent = await user.findOne({username : data.opponent}).select('socket_id')
-        socket.to(opponent.socket_id).emit('opponent move',data)
+        // const opponent = await user.findOne({username : data.opponent}).select('socket_id')
+        socket.to(data.socket_id).emit('opponent move',data)
+    })
+
+    socket.on('participate',async() => {
+        const newUser = await user.findOne({_id : socket.request.session.userId}).select('username socket_id')
+        const activeUsers = await user.find({wantsToPlay : true,is_ingame : false , _id : {$ne : socket.request.session.userId}}).select('username socket_id')
+
+        if(activeUsers.length === 0){
+            socket.emit('No users')
+        }
+        else{
+            const opponent = getRandomElement(activeUsers)
+            const room = [newUser,opponent]
+            const newGame =  new game({room : room})
+            const gameDetails = await newGame.save()
+            
+            message_opp = {
+                game_id : gameDetails._id,
+                your_turn : true,
+                ...newUser._doc
+            }
+            message_new = {
+                game_id : gameDetails._id,
+                your_turn : false,
+                ...opponent._doc
+            }
+
+            await user.updateOne(
+                { _id: newUser._id },
+                {
+                  $set: { is_ingame: true, game: gameDetails },
+                  $push: { gamesList: gameDetails._id }
+                }
+              );
+              await user.updateOne(
+                { _id: opponent._id },
+                {
+                  $set: { is_ingame: true, game: gameDetails },
+                  $push: { gamesList: gameDetails._id }
+                }
+              );
+            socket.emit('Game',message_new)
+            socket.to(opponent.socket_id).emit('Game',message_opp)
+
+        }
+        await user.updateOne({_id : socket.request.session.userId},{$set : {wantsToPlay : true}})
+    })
+
+    socket.on('withdraw',async() => {
+        await user.updateOne({_id : socket.request.session.userId},{$set : {wantToPlay : false}})
     })
     
     socket.on('disconnect',async() => {
@@ -152,13 +203,13 @@ io.on('connection',async(socket)=>{
 
                 await socket.to(opponent.socket_id).emit('opponent left',leftUser.game)
 
-                await user.updateOne({_id : socket.request.session.userId},{$set : {socket_id : "" , is_online : false,is_ingame : false , game : null}});
+                await user.updateOne({_id : socket.request.session.userId},{$set : {socket_id : "" ,wantsToPlay:false, is_online : false,is_ingame : false , game : null}});
 
                 socket.broadcast.emit('leftUser',leftUser)
 
             }
             else{
-                await user.updateOne({_id : socket.request.session.userId},{$set : {socket_id : "" , is_online : false}});
+                await user.updateOne({_id : socket.request.session.userId},{$set : {socket_id : "" ,wantsToPlay:false, is_online : false}});
                 socket.broadcast.emit('leftUser',leftUser)
                 console.log(leftUser.username , ' is disconncted ... 😖')
             }
@@ -166,13 +217,11 @@ io.on('connection',async(socket)=>{
         }
         else{
             console.log('An duplicate instance is closed !!!! with id : ',socket.request.session.userId,' and socket_id : ',socket.id)
-        }
-
-
-        
+        }  
 
 
     })
+
 })
 
 

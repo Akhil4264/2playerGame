@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema({
         type : Boolean,
         default : false
     },
+    wantsToPlay : {
+        type : Boolean,
+        default : false
+    },
     game : {
         type : gameSchema,
         default : null
